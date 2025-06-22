@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Only1Hof IRL Stream Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        /* Loading Screen Styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .loading-logo {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            animation: bounce 2s infinite;
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-progress {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            margin-top: 2rem;
+            overflow: hidden;
+        }
+        
+        .loading-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .loading-status {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-20px); }
+            60% { transform: translateY(-10px); }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Main Dashboard Styles */
+        .dashboard {
+            padding: 10px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .dashboard.visible {
+            opacity: 1;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            animation: slideInDown 0.6s ease;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-online { background: #4ade80; }
+        .status-offline { background: #ef4444; }
+        .status-warning { background: #fbbf24; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            animation: slideInUp 0.6s ease;
+            animation-fill-mode: both;
+        }
+        
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+        
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .card h2 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 10px;
+            transition: transform 0.2s ease;
+        }
+        
+        .metric:hover {
+            transform: translateY(-2px);
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #1f2937;
+            display: block;
+        }
+        
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        
+        .progress-container {
+            margin: 10px 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .progress-normal { background: linear-gradient(90deg, #10b981, #059669); }
+        .progress-warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .progress-danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        
+        .connection-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .connection-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .connection-name {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .connection-speed {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+        
+        .service-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .service-status:hover {
+            background: #f3f4f6;
+        }
+        
+        .refresh-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+            transition: transform 0.2s ease;
+            z-index: 100;
+        }
+        
+        .refresh-button:hover {
+            transform: scale(1.1);
+        }
+        
+        .refresh-button:active {
+            transform: scale(0.95);
+        }
+        
+        .last-update {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .container {
+                max-width: 100%;
+                padding: 0 5px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .metric-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .loading-text {
+                font-size: 1.2rem;
+                padding: 0 20px;
+            }
+            
+            .loading-progress {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">🦁</div>
+        <div class="loading-text">Initializing Only1Hof IRL Stream Dashboard</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar" id="loadingProgressBar"></div>
+        </div>
+        <div class="loading-status" id="loadingStatus">Connecting to system...</div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <div class="container">
+            <div class="header">
+                <h1>Only1Hof IRL Stream Dashboard</h1>
+                <div id="overall-status">
+                    <span class="status-indicator status-online"></span>
+                    <span id="status-text">System Online</span>
+                </div>
+            </div>
+            
+            <!-- System Resources -->
+            <div class="card">
+                <h2>💻 System Resources</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <span class="metric-value" id="cpu-usage">--</span>
+                        <div class="metric-label">CPU Usage</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="memory-usage">--</span>
+                        <div class="metric-label">Memory</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="temperature">--</span>
+                        <div class="metric-label">Temperature</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="uptime">--</span>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>CPU Load</span>
+                        <span id="cpu-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-normal" id="cpu-progress"></div>
+                    </div>
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-label">
+                        <span>Memory Usage</span>
+                        <span id="memory-percent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill progress-normal" id="memory-progress"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Network Status -->
+            <div class="card">
+                <h2>🌐 Network Status</h2>
+                <div id="network-connections">
+                    <div class="connection-item">
+                        <div>
+                            <div class="connection-name">WiFi Connection</div>
+                            <div class="connection-speed" id="wifi-speed">Checking...</div>
+                        </div>
+                        <span class="status-indicator" id="wifi-status"></span>
+                    </div>
+                    <div class="connection-item">
+                        <div>
+                            <div class="connection-name">Verizon USB</div>
+                            <div class="connection-speed" id="verizon-speed">Checking...</div>
+                        </div>
+                        <span class="status-indicator" id="verizon-status"></span>
+                    </div>
+                    <div class="connection-item">
+                        <div>
+                            <div class="connection-name">Speedify Bonding</div>
+                            <div class="connection-speed" id="speedify-speed">Checking...</div>
+                        </div>
+                        <span class="status-indicator" id="speedify-status"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Services -->
+            <div class="card">
+                <h2>⚙️ Services</h2>
+                <div id="services-list">
+                    <div class="service-status">
+                        <span>Access Point (hostapd)</span>
+                        <span class="status-indicator" id="hostapd-status"></span>
+                    </div>
+                    <div class="service-status">
+                        <span>DHCP Server (dnsmasq)</span>
+                        <span class="status-indicator" id="dnsmasq-status"></span>
+                    </div>
+                    <div class="service-status">
+                        <span>Speedify</span>
+                        <span class="status-indicator" id="speedify-service-status"></span>
+                    </div>
+                    <div class="service-status">
+                        <span>Netdata</span>
+                        <span class="status-indicator" id="netdata-status"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="refresh-button" onclick="refreshData()" id="refresh-btn">
+            🔄
+        </button>
+        
+        <div class="last-update">
+            Last updated: <span id="last-update-time">--</span>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
